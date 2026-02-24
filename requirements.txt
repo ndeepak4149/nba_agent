@@ -1,0 +1,8 @@
+groq<1
+python-dotenv
+nba_api
+pandas
+langchain
+langchain-community
+wikipedia
+numpy<2
