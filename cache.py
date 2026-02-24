@@ -15,10 +15,6 @@ class CacheManager:
         return os.path.join(self.cache_dir, f"{key}.json")
     
     def set(self, key: str, value: dict, ttl_hours: int = 24):
-        """
-        Cache a value with TTL (time to live)
-        ttl_hours: how long to keep the cache (default 24 hours)
-        """
         cache_file = self.get_cache_file(key)
         cache_data = {
             "value": value,
@@ -29,10 +25,6 @@ class CacheManager:
             json.dump(cache_data, f)
     
     def get(self, key: str):
-        """
-        Get a cached value if it exists and hasn't expired
-        Returns None if cache doesn't exist or has expired
-        """
         cache_file = self.get_cache_file(key)
         
         if not os.path.exists(cache_file):
@@ -42,13 +34,11 @@ class CacheManager:
             with open(cache_file, 'r') as f:
                 cache_data = json.load(f)
             
-            # Check if cache has expired
             timestamp = datetime.fromisoformat(cache_data["timestamp"])
             ttl_hours = cache_data["ttl_hours"]
             expiry_time = timestamp + timedelta(hours=ttl_hours)
             
             if datetime.now() > expiry_time:
-                # Cache expired, delete it
                 os.remove(cache_file)
                 return None
             
@@ -69,5 +59,4 @@ class CacheManager:
         if os.path.exists(cache_file):
             os.remove(cache_file)
 
-# Global cache manager instance
 cache_manager = CacheManager()

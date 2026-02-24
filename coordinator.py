@@ -1,7 +1,5 @@
-"""
-NBA Agent Coordinator - Orchestrates multiple agents to work together
-"""
 import os
+import sys
 from dotenv import load_dotenv
 from groq import Groq
 from agents import StatsAnalyzer, PlayerScout, TradeAnalyst, GamePredictor
@@ -17,8 +15,14 @@ class NBACrew:
         self.scout = PlayerScout()
         self.trader = TradeAnalyst()
         self.predictor = GamePredictor()
-        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        self.model = "llama-3.3-70b-versatile"
+        
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key or "your_groq_api_key" in api_key:
+            print("❌ ERROR: Invalid or missing GROQ_API_KEY in .env file.")
+            sys.exit(1)
+            
+        self.client = Groq(api_key=api_key)
+        self.model = "llama-3.1-8b-instant"
         self.conversation_history = []
         
         self.agents = {
@@ -52,6 +56,7 @@ Please synthesize these responses into a detailed, comprehensive answer that:
 2. Highlights the most important findings and explains the 'why' behind them.
 3. Provides actionable recommendations backed by specific statistics.
 4. Explains advanced concepts clearly but maintains technical depth.
+5. If live stats are missing, rely on your expert knowledge of current NBA rosters and trends.
 
 Task: {task}
 
@@ -74,32 +79,68 @@ Synthesis:"""
     def route_task(self, task: str) -> str:
         """Intelligently routes a task to the best agent."""
         print(f"Coordinator: Routing task '{task}'...")
+        
+        router_prompt = f"""
+        You are the routing brain for an NBA AI system. Your goal is to map a user's request to the correct tool and extract the necessary parameters.
+        
+        Available Tools:
+        1. evaluate_trade(player1, player2) - Analyze a trade between two players.
+        2. predict_game(team1, team2) - Predict the winner of a game between two teams.
+        3. scout_player(player_name) - Detailed scouting report for a player.
+        4. analyze_player_comprehensive(player_name) - General stats and analysis for a player.
+        5. analyze_team_comprehensive(team_name) - General team analysis (Current season only).
+        6. check_live_games() - Check scores or games scheduled for today.
+        7. ask_question(question) - General knowledge, historical questions, comparisons of eras, or if no other tool fits.
 
-        task_lower = task.lower()
-        if "trade" in task_lower or "compare" in task_lower:
-            players = task_lower.replace("trade", "").replace("compare", "").replace(" for ", " and ").split(" and ")
-            player1 = players[0].strip() if len(players) > 0 else ""
-            player2 = players[1].strip() if len(players) > 1 else ""
-            if player1 and player2:
-                return self.evaluate_trade(player1, player2)
-        elif "predict" in task_lower or " vs " in task_lower:
-            teams = task_lower.replace("predict", "").replace("who will win between the", "").replace(" and the", " vs ").split(" vs ")
-            team1 = teams[0].strip() if len(teams) > 0 else ""
-            team2 = teams[1].strip() if len(teams) > 1 else ""
-            if team1 and team2:
-                return self.predict_game(team1, team2)
-        elif "scout" in task_lower or "potential" in task_lower:
-            player_name = task_lower.replace("scout", "").replace("potential of", "").strip()
-            return self.scout.scout_player(player_name)
-        elif "stats" in task_lower or "analyze" in task_lower or "how good is" in task_lower:
-            entity_name = task_lower.replace("stats for", "").replace("analyze", "").replace("how good is", "").strip()
-            return self.analyze_player_comprehensive(entity_name)
+        User Request: "{task}"
+        
+        IMPORTANT: If the user asks about a specific year, historical team (e.g., '96 Bulls'), or compares eras, use 'ask_question'.
+        
+        Output strictly valid JSON with keys: "tool" (string) and "params" (dict).
+        Example: {{"tool": "evaluate_trade", "params": {{"player1": "LeBron James", "player2": "Steph Curry"}}}}
+        """
+        
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[{"role": "user", "content": router_prompt}],
+                temperature=0.0,
+                response_format={"type": "json_object"}
+            )
+            
+            routing_decision = json.loads(response.choices[0].message.content)
+            tool = routing_decision.get("tool")
+            params = routing_decision.get("params", {})
+            
+            print(f"  -> Decided to use: {tool} with {params}")
 
-        return self.ask_question(task)
+            if tool == "evaluate_trade":
+                return self.evaluate_trade(params.get("player1"), params.get("player2"))
+            elif tool == "predict_game":
+                return self.predict_game(params.get("team1"), params.get("team2"))
+            elif tool == "scout_player":
+                return self.scout.scout_player(params.get("player_name"))
+            elif tool == "analyze_player_comprehensive":
+                return self.analyze_player_comprehensive(params.get("player_name"))
+            elif tool == "analyze_team_comprehensive":
+                return self.analyze_team_comprehensive(params.get("team_name"))
+            elif tool == "check_live_games":
+                return self.analyzer.check_live_games()
+            else:
+                return self.ask_question(task)
+                
+        except Exception as e:
+            print(f"Routing Error: {e}. Falling back to general question.")
+            return self.ask_question(task)
 
     def run(self, task: str) -> str:
         """Main entry point to run a task with the crew."""
         print(f"Executing task: {task}")
+        
+        # Reset agent memories to prevent context bloating and rate limits
+        for agent in self.agents.values():
+            agent.reset_memory()
+            
         self.add_to_history("user", task)
         answer = self.route_task(task)
         self.add_to_history("assistant", answer)
@@ -168,12 +209,20 @@ Synthesis:"""
         
         responses = {}
         
-        print(f"Game Predictor: Analyzing matchup...")
-        responses["prediction"] = self.predictor.predict_matchup(team1, team2)
-        
-        print(f"Stats Analyzer: Analyzing both teams...")
-        responses["team1_analysis"] = self.analyzer.analyze_team(team1)
-        responses["team2_analysis"] = self.analyzer.analyze_team(team2)
+        try:
+            print(f"Game Predictor: Analyzing matchup...")
+            responses["prediction"] = self.predictor.predict_matchup(team1, team2)
+        except Exception as e:
+            print(f"⚠️ Game Predictor Error: {e}")
+            responses["prediction"] = "Data unavailable due to API error."
+
+        try:
+            print(f"Stats Analyzer: Analyzing both teams...")
+            responses["team1_analysis"] = self.analyzer.analyze_team(team1)
+            responses["team2_analysis"] = self.analyzer.analyze_team(team2)
+        except Exception as e:
+            print(f"⚠️ Stats Analyzer Error: {e}")
+            responses["team_analysis"] = "Data unavailable due to API error."
         
         print(f"Synthesizing prediction...")
         synthesis = self.synthesize_responses(
@@ -217,9 +266,7 @@ Be professional and knowledgeable."""
         self.conversation_history = []
 
 
-# Interactive CLI for testing
 def main():
-    """Main function for interactive testing"""
     crew = NBACrew()
     
     print("=" * 60)

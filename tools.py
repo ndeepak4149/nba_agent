@@ -1,4 +1,4 @@
-from data import get_player_info, get_team_info, get_all_players, get_all_teams, search_players_by_name
+from data import get_player_info, get_team_info, get_all_players, get_all_teams, search_players_by_name, get_live_games
 import json
 
 class NBATool:
@@ -74,6 +74,16 @@ class NBATool:
                 "error": "One or both players not found"
             }
         
+        # Handle Lite Mode (No Stats)
+        if p1.get("stats") is None or p2.get("stats") is None:
+            return {
+                "success": True,
+                "mode": "lite",
+                "player1": p1,
+                "player2": p2,
+                "note": "Statistical comparison unavailable in Lite mode. Using biographical data."
+            }
+
         return {
             "success": True,
             "player1": player1,
@@ -96,4 +106,14 @@ class NBATool:
                     player2: p2["stats"]["field_goal_percentage"]
                 }
             }
+        }
+    
+    @staticmethod
+    def get_games_today() -> dict:
+        """Get live games happening today"""
+        games = get_live_games()
+        return {
+            "success": True,
+            "games": games,
+            "count": len(games)
         }

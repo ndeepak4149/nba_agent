@@ -1,63 +1,72 @@
 from nba_api.stats.static import players, teams
-from nba_api.stats.endpoints import playercareerstats
-import pandas as pd
+import wikipedia
+from cache import cache_manager
+from datetime import datetime
+
+# Set wikipedia language
+wikipedia.set_lang("en")
 
 def get_player_info(player_name):
-    """Fetch player stats from NBA API"""
+    """Fetch player info from Static API + Wikipedia"""
     nba_players = players.get_players()
     found_player = next((p for p in nba_players if p['full_name'].lower() == player_name.lower()), None)
     
     if not found_player:
         return None
 
+    cache_key = f"player_lite_{found_player['id']}"
+    cached_data = cache_manager.get(cache_key)
+    if cached_data:
+        return cached_data
+
     try:
-        # Fetch career stats
-        career = playercareerstats.PlayerCareerStats(player_id=found_player['id'])
-        df = career.get_data_frames()[0]
-        
-        if df.empty:
-            return None
-            
-        # Get most recent season data
-        latest = df.iloc[-1]
-        gp = float(latest['GP'])
-        
-        if gp == 0:
-            return None
-            
-        # Calculate per-game stats (API returns totals)
-        return {
-            "id": found_player['id'],
-            "full_name": found_player['full_name'],
-            "stats": {
-                "points_per_game": round(float(latest['PTS']) / gp, 1),
-                "rebounds_per_game": round(float(latest['REB']) / gp, 1),
-                "assists_per_game": round(float(latest['AST']) / gp, 1),
-                "field_goal_percentage": float(latest['FG_PCT']),
-                "games_played": int(gp),
-                "season": latest['SEASON_ID']
-            }
-        }
-    except Exception as e:
-        print(f"Error fetching stats for {player_name}: {e}")
-        return None
+        # Fetch summary from Wikipedia
+        # We append "NBA" to ensure we get the basketball player
+        summary = wikipedia.summary(f"{found_player['full_name']} NBA", sentences=4)
+    except Exception:
+        summary = "No biography available."
+
+    result = {
+        "id": found_player['id'],
+        "full_name": found_player['full_name'],
+        "is_active": found_player['is_active'],
+        "summary": summary,
+        "source": "Wikipedia (Lite Mode)",
+        "stats": None  # Stats disabled to avoid blocking
+    }
+    
+    cache_manager.set(cache_key, result)
+    return result
 
 def get_team_info(team_name):
-    """Fetch team info from NBA API"""
+    """Fetch team info from Static API + Wikipedia"""
     nba_teams = teams.get_teams()
     found_team = next((t for t in nba_teams if t['full_name'].lower() == team_name.lower() or t['nickname'].lower() == team_name.lower()), None)
     
     if not found_team:
         return None
-        
-    return {
+    
+    cache_key = f"team_lite_{found_team['id']}"
+    cached_data = cache_manager.get(cache_key)
+    if cached_data:
+        return cached_data
+    
+    try:
+        # Fetch general team history and info from Wikipedia
+        summary = wikipedia.summary(f"{found_team['full_name']} NBA", sentences=4)
+    except Exception:
+        summary = "No team history available."
+
+    result = {
         "id": found_team['id'],
         "full_name": found_team['full_name'],
-        "abbreviation": found_team['abbreviation'],
-        "city": found_team['city'],
-        "state": found_team['state'],
-        "year_founded": found_team['year_founded']
+        "summary": summary,
+        "source": "Wikipedia (Lite Mode)",
+        "stats": None
     }
+    
+    cache_manager.set(cache_key, result)
+    return result
 
 def get_all_players(limit=50):
     return [p['full_name'] for p in players.get_players()[:limit]]
@@ -67,3 +76,12 @@ def get_all_teams():
 
 def search_players_by_name(query, limit=10):
     return [p['full_name'] for p in players.get_players() if query.lower() in p['full_name'].lower()][:limit]
+
+def get_live_games():
+    """Stub for live games to avoid API blocks"""
+    return [{
+        "status": "Info",
+        "matchup": "Live Data Disabled",
+        "score": "N/A",
+        "period": "Lite Mode"
+    }]

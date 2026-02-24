@@ -13,8 +13,8 @@ class BaseAgent:
         self.name = name
         self.role = role
         self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-        self.model = "llama-3.3-70b-versatile"
-        self.memory = []  # Store conversation history
+        self.model = "llama-3.1-8b-instant"
+        self.memory = []
         self.tools = NBATool()
     
     def add_to_memory(self, role: str, content: str):
@@ -23,13 +23,19 @@ class BaseAgent:
             "role": role,
             "content": content
         })
+
+    def reset_memory(self):
+        """Clear the agent's memory"""
+        self.memory = []
     
     def get_system_prompt(self) -> str:
         """Get the system prompt for this agent"""
         return f"""You are {self.name}, an NBA AI agent with the role: {self.role}
         
 You have access to real NBA data including player stats, team information, and player comparisons.
-When asked questions about NBA, provide detailed, informative answers based on the available data.
+When asked questions about NBA, provide detailed, informative answers.
+If the provided context contains specific stats, prioritize them.
+If the context is missing stats (Lite Mode), USE YOUR INTERNAL KNOWLEDGE about current rosters, player strengths, and team dynamics to provide the best possible analysis.
 Be professional, knowledgeable, and helpful.
 If you don't have information about something, say so clearly."""
     
@@ -82,8 +88,19 @@ class StatsAnalyzer(BaseAgent):
             return team_info["error"]
         
         data = json.dumps(team_info["data"], indent=2)
-        query = f"Analyze this team's performance in detail, explaining key strengths and weaknesses:\n{data}"
+        query = f"Analyze this team's performance based on the provided data. If specific stats/roster are missing (Lite Mode), provide a general assessment of the team's status and history:\n{data}"
         
+        return self.think(query)
+    
+    def check_live_games(self) -> str:
+        """Check live games"""
+        games_info = self.tools.get_games_today()
+        
+        if not games_info["success"]:
+            return "Failed to fetch live games."
+            
+        data = json.dumps(games_info["games"], indent=2)
+        query = f"Report on the NBA games happening today based on this data:\n{data}"
         return self.think(query)
 
 class PlayerScout(BaseAgent):
@@ -152,6 +169,6 @@ class GamePredictor(BaseAgent):
         }
         
         data_str = json.dumps(data, indent=2)
-        query = f"Predict the outcome of this matchup based on the statistics, providing a detailed explanation of the factors involved:\n{data_str}"
+        query = f"Predict the outcome of this matchup. If specific stats are provided, use them. If not, rely on your knowledge of the teams' current rosters and playing styles:\n{data_str}"
         
         return self.think(query)

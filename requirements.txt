@@ -1,8 +1,7 @@
-groq<1
-python-dotenv
 nba_api
 pandas
+groq
+python-dotenv
 langchain
 langchain-community
 wikipedia
-numpy<2
