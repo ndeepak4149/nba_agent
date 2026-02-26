@@ -8,7 +8,7 @@ try:
     import langchain
     import nba_api
     import wikipedia
-    print("✅ SUCCESS: All AI libraries are installed and ready.")
+    print("SUCCESS: All AI libraries are installed and ready.")
     print("We are ready to build the NBA Agent.")
 except ImportError as e:
     print(f"❌ ERROR: Missing library -> {e}")

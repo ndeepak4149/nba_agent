@@ -15,5 +15,5 @@ response = client.chat.completions.create(
     ]
 )
 
-print("✅ Setup successful!")
+print("Setup successful!")
 print(f"Response: {response.choices[0].message.content}")

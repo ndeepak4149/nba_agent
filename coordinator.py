@@ -39,7 +39,6 @@ class NBACrew:
         }
     
     def add_to_history(self, role: str, content: str):
-        """Add message to conversation history"""
         self.conversation_history.append({
             "role": role,
             "content": content
@@ -147,7 +146,6 @@ Synthesis:"""
         return answer
     
     def analyze_player_comprehensive(self, player_name: str) -> str:
-        """Comprehensive player analysis using multiple agents"""
         print(f"Analyzing {player_name} from multiple perspectives...")
         
         responses = {}
@@ -167,7 +165,6 @@ Synthesis:"""
         return synthesis
     
     def analyze_team_comprehensive(self, team_name: str) -> str:
-        """Comprehensive team analysis using multiple agents"""
         print(f"Analyzing {team_name} from multiple perspectives...")
         
         responses = {}
@@ -184,7 +181,6 @@ Synthesis:"""
         return synthesis
     
     def evaluate_trade(self, player1: str, player2: str) -> str:
-        """Evaluate a potential trade between two players"""
         print(f"Evaluating trade: {player1} for {player2}...")
         
         responses = {}
@@ -204,7 +200,6 @@ Synthesis:"""
         return synthesis
     
     def predict_game(self, team1: str, team2: str) -> str:
-        """Predict a game outcome with detailed analysis"""
         print(f"Predicting: {team1} vs {team2}...")
         
         responses = {}
@@ -233,7 +228,6 @@ Synthesis:"""
         return synthesis
     
     def ask_question(self, question: str) -> str:
-        """Answer any NBA-related question using the crew"""
         print(f"Processing question: {question}")
         
         self.add_to_history("user", question)
@@ -262,7 +256,6 @@ Be professional and knowledgeable."""
         return answer
     
     def clear_history(self):
-        """Clear conversation history"""
         self.conversation_history = []
 
 

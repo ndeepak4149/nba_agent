@@ -22,7 +22,7 @@ def get_player_info(player_name):
     try:
         # Fetch summary from Wikipedia
         # We append "NBA" to ensure we get the basketball player
-        summary = wikipedia.summary(f"{found_player['full_name']} NBA", sentences=4)
+        summary = wikipedia.summary(f"{found_player['full_name']} NBA", sentences=2)
     except Exception:
         summary = "No biography available."
 
@@ -53,7 +53,7 @@ def get_team_info(team_name):
     
     try:
         # Fetch general team history and info from Wikipedia
-        summary = wikipedia.summary(f"{found_team['full_name']} NBA", sentences=4)
+        summary = wikipedia.summary(f"{found_team['full_name']} NBA", sentences=2)
     except Exception:
         summary = "No team history available."
 

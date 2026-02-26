@@ -4,3 +4,14 @@ __pycache__/
 .env
 .DS_Store
 cache/
+
+# Jupyter Notebooks (Common for ML experimentation)
+.ipynb_checkpoints
+
+# Testing and Coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Vector Database persistence (ChromaDB)
+chroma_db/

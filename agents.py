@@ -18,18 +18,15 @@ class BaseAgent:
         self.tools = NBATool()
     
     def add_to_memory(self, role: str, content: str):
-        """Add a message to memory"""
         self.memory.append({
             "role": role,
             "content": content
         })
 
     def reset_memory(self):
-        """Clear the agent's memory"""
         self.memory = []
     
     def get_system_prompt(self) -> str:
-        """Get the system prompt for this agent"""
         return f"""You are {self.name}, an NBA AI agent with the role: {self.role}
         
 You have access to real NBA data including player stats, team information, and player comparisons.
@@ -40,7 +37,6 @@ Be professional, knowledgeable, and helpful.
 If you don't have information about something, say so clearly."""
     
     def think(self, query: str) -> str:
-        """Think about a query and provide a response"""
         self.add_to_memory("user", query)
         
         messages = [
@@ -69,7 +65,6 @@ class StatsAnalyzer(BaseAgent):
         )
     
     def analyze_player(self, player_name: str) -> str:
-        """Analyze a specific player"""
         player_info = self.tools.get_player_stats(player_name)
         
         if not player_info["success"]:
@@ -81,7 +76,6 @@ class StatsAnalyzer(BaseAgent):
         return self.think(query)
     
     def analyze_team(self, team_name: str) -> str:
-        """Analyze a specific team"""
         team_info = self.tools.get_team_stats(team_name)
         
         if not team_info["success"]:
@@ -93,7 +87,6 @@ class StatsAnalyzer(BaseAgent):
         return self.think(query)
     
     def check_live_games(self) -> str:
-        """Check live games"""
         games_info = self.tools.get_games_today()
         
         if not games_info["success"]:
@@ -113,7 +106,6 @@ class PlayerScout(BaseAgent):
         )
     
     def scout_player(self, player_name: str) -> str:
-        """Scout a player"""
         player_info = self.tools.get_player_stats(player_name)
         
         if not player_info["success"]:
@@ -134,7 +126,6 @@ class TradeAnalyst(BaseAgent):
         )
     
     def compare_for_trade(self, player1: str, player2: str) -> str:
-        """Compare two players for a potential trade"""
         comparison = self.tools.compare_players(player1, player2)
         
         if not comparison["success"]:
@@ -155,7 +146,6 @@ class GamePredictor(BaseAgent):
         )
     
     def predict_matchup(self, team1: str, team2: str) -> str:
-        """Predict a game outcome between two teams"""
         team1_info = self.tools.get_team_stats(team1)
         team2_info = self.tools.get_team_stats(team2)
         
