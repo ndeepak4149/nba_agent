@@ -1,17 +1,13 @@
-venv/
-__pycache__/
-*.pyc
+# Environment variables
 .env
-.DS_Store
+
+# Local database and cache
+chroma_db/
 cache/
 
-# Jupyter Notebooks (Common for ML experimentation)
-.ipynb_checkpoints
+# Python artifacts
+__pycache__/
+*.pyc
 
-# Testing and Coverage artifacts
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Vector Database persistence (ChromaDB)
-chroma_db/
+# macOS specific
+.DS_Store

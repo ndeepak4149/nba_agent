@@ -11,6 +11,9 @@ GROQ_MODEL = "llama-3.1-8b-instant"
 AGENT_TEMPERATURE = 0.7
 AGENT_MAX_TOKENS = 2048
 
+# Data Mode ("LITE" or "FULL")
+DATA_MODE = os.getenv("DATA_MODE", "LITE")
+
 # NBA Data
 NBA_TEAMS = [
     "Los Angeles Lakers",

@@ -2,14 +2,34 @@ from nba_api.stats.static import players, teams
 import wikipedia
 from cache import cache_manager
 from datetime import datetime
+from config import DATA_MODE
+from stats import get_player_season_stats, get_team_season_stats
 
-# Set wikipedia language
 wikipedia.set_lang("en")
+
+_player_lookup = None
+_team_lookup = None
+
+def _initialize_lookups():
+    """Builds fast, O(1) lookup dictionaries for players and teams on first use."""
+    global _player_lookup, _team_lookup
+    if _player_lookup is None:
+        print("Initializing player lookup dictionary...")
+        _player_lookup = {p['full_name'].lower(): p for p in players.get_players()}
+    
+    if _team_lookup is None:
+        print("Initializing team lookup dictionary...")
+        nba_teams = teams.get_teams()
+        # Create a lookup for both full name and nickname
+        _team_lookup = {t['full_name'].lower(): t for t in nba_teams}
+        for t in nba_teams:
+            if t['nickname']:
+                _team_lookup[t['nickname'].lower()] = t
 
 def get_player_info(player_name):
     """Fetch player info from Static API + Wikipedia"""
-    nba_players = players.get_players()
-    found_player = next((p for p in nba_players if p['full_name'].lower() == player_name.lower()), None)
+    _initialize_lookups()
+    found_player = _player_lookup.get(player_name.lower())
     
     if not found_player:
         return None
@@ -20,19 +40,32 @@ def get_player_info(player_name):
         return cached_data
 
     try:
-        # Fetch summary from Wikipedia
         # We append "NBA" to ensure we get the basketball player
         summary = wikipedia.summary(f"{found_player['full_name']} NBA", sentences=2)
     except Exception:
         summary = "No biography available."
+
+    player_stats = None
+    source = "Wikipedia (Lite Mode)"
+
+    if DATA_MODE == "FULL":
+        try:
+            stats_data = get_player_season_stats(found_player['id'])
+            if stats_data:
+                player_stats = stats_data
+                source = "nba_api (Full Mode)"
+        except Exception as e:
+            print(f"Could not fetch full stats for {player_name}: {e}")
+            # Fallback to lite mode if full mode fails
+            pass
 
     result = {
         "id": found_player['id'],
         "full_name": found_player['full_name'],
         "is_active": found_player['is_active'],
         "summary": summary,
-        "source": "Wikipedia (Lite Mode)",
-        "stats": None  # Stats disabled to avoid blocking
+        "source": source,
+        "stats": player_stats
     }
     
     cache_manager.set(cache_key, result)
@@ -40,8 +73,8 @@ def get_player_info(player_name):
 
 def get_team_info(team_name):
     """Fetch team info from Static API + Wikipedia"""
-    nba_teams = teams.get_teams()
-    found_team = next((t for t in nba_teams if t['full_name'].lower() == team_name.lower() or t['nickname'].lower() == team_name.lower()), None)
+    _initialize_lookups()
+    found_team = _team_lookup.get(team_name.lower())
     
     if not found_team:
         return None
@@ -52,17 +85,29 @@ def get_team_info(team_name):
         return cached_data
     
     try:
-        # Fetch general team history and info from Wikipedia
         summary = wikipedia.summary(f"{found_team['full_name']} NBA", sentences=2)
     except Exception:
         summary = "No team history available."
+
+    team_stats = None
+    source = "Wikipedia (Lite Mode)"
+
+    if DATA_MODE == "FULL":
+        try:
+            stats_data = get_team_season_stats(found_team['id'])
+            if stats_data:
+                team_stats = stats_data
+                source = "nba_api (Full Mode)"
+        except Exception as e:
+            print(f"Could not fetch full stats for {team_name}: {e}")
+            pass
 
     result = {
         "id": found_team['id'],
         "full_name": found_team['full_name'],
         "summary": summary,
-        "source": "Wikipedia (Lite Mode)",
-        "stats": None
+        "source": source,
+        "stats": team_stats
     }
     
     cache_manager.set(cache_key, result)

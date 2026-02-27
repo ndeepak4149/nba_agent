@@ -1,31 +1,35 @@
 import chromadb
 import os
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # This script mimics an ETL (Extract, Transform, Load) pipeline.
 # It loads raw text data into a vector database for the agent to retrieve later.
 
 def ingest_data():
-    print("Starting Data Ingestion...")
+    print("Starting Advanced Data Ingestion...")
 
     client = chromadb.PersistentClient(path="./chroma_db")
 
     # Note: Chroma uses a default embedding model (all-MiniLM-L6-v2) if none is provided.
     # This runs locally and is free.
     collection = client.get_or_create_collection(name="nba_knowledge_base")
-
-    documents = [
-        "The Boston Celtics won the 2024 NBA Championship.",
-        "Jaylen Brown was named the 2024 NBA Finals MVP.",
-        "Victor Wembanyama won the 2024 Rookie of the Year award.",
-        "Nikola Jokic won the 2023-2024 NBA MVP award.",
-        "The NBA In-Season Tournament was won by the Los Angeles Lakers in 2023."
-    ]
     
-    ids = [f"doc_{i}" for i in range(len(documents))]
+    # 1. EXTRACT: Load data from a file
+    print("Extracting data from nba_articles.txt...")
+    with open("nba_articles.txt", "r") as f:
+        text_data = f.read()
 
+    # 2. TRANSFORM: Chunk the data into smaller, more manageable pieces
+    print("Transforming data (chunking)...")
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    documents = text_splitter.split_text(text_data)
+    ids = [f"chunk_{i}" for i in range(len(documents))]
+
+    # 3. LOAD: Upsert the chunks into ChromaDB
+    print(f"Loading {len(documents)} document chunks into ChromaDB...")
     collection.upsert(documents=documents, ids=ids)
     
-    print(f"Successfully ingested {len(documents)} documents into ChromaDB.")
+    print("Successfully completed ingestion pipeline.")
 
 if __name__ == "__main__":
     ingest_data()

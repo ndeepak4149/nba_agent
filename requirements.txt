@@ -1,20 +1,10 @@
 # Core Application
 streamlit>=1.35.0
-langchain
-tavily-python
 langchain-community
-langchain-openai
-langchain-groq
+groq
 python-dotenv
+nba_api
+wikipedia
 
 # AI Engineering & Ops
-arize-phoenix
-openinference-instrumentation-langchain
 chromadb
-pytest
-
-# Dependency Constraints (Resolving Conflicts)
-# Pin packaging to satisfy langchain-core (<26.0)
-packaging<26.0
-# Ensure compatibility with Pydantic v2 (required by LangChain)
-fastapi>=0.109.0

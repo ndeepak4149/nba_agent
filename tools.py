@@ -1,5 +1,7 @@
 from data import get_player_info, get_team_info, get_all_players, get_all_teams, search_players_by_name, get_live_games
 import json
+from langchain_community.tools import WikipediaQueryRun
+from langchain_community.utilities import WikipediaAPIWrapper
 
 class NBATool:
     """Tools that agents can use to access NBA data"""
@@ -117,3 +119,18 @@ class NBATool:
             "games": games,
             "count": len(games)
         }
+
+    @staticmethod
+    def web_search(query: str) -> dict:
+        """Search Wikipedia for information about a topic, person, or event."""
+        try:
+            # We limit it to the top 1 result to keep it concise
+            api_wrapper = WikipediaAPIWrapper(top_k_results=1, doc_content_chars_max=2000)
+            wiki = WikipediaQueryRun(api_wrapper=api_wrapper)
+            result = wiki.run(query)
+            return {
+                "success": True,
+                "result": result
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
