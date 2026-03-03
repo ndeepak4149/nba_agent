@@ -103,7 +103,9 @@ TAVILY_API_KEY=your tavily api key (free to use)
 DATA_MODE="FULL"
 
 BUILD AND RUN DOCKER CONTAINER
+
 docker build -t nba-agent .
+
 docker run -p 8501:8501 --env-file .env nba-agent
 
 
